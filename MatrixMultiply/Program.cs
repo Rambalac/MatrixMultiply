@@ -9,31 +9,32 @@ using System.Numerics;
 
 namespace MatrixMultiply
 {
-    public class Matrix<T> where T: struct
+    public class Matrix
     {
         public int Width { get; }
         public int Height { get; }
 
-        private T[][] m;
+        private double[][] m;
 
+        private static int vsize = Vector<double>.Count;
 
         public Matrix(int width, int height)
         {
             Width = width;
             Height = height;
-            m = new T[height][];
+            m = new double[height][];
             for (int row = 0; row < height; row++)
             {
-                m[row] = new T[width];
+                m[row] = new double[width];
             }
         }
 
-        public Matrix<T> Transpose()
+        public Matrix Transpose()
         {
-            var result = new Matrix<T>(Height, Width);
-            for (int row = 0; row < Height; row++)
+            var result = new Matrix(Height, Width);
+            for (int row = 0; row < Width; row++)
             {
-                for (int col = 0; col < Width; col++)
+                for (int col = 0; col < Height; col++)
                 {
                     result.m[col][row] = m[row][col];
                 }
@@ -42,69 +43,94 @@ namespace MatrixMultiply
             return result;
         }
 
-        public static Matrix<T> Multiply(Matrix<T> a, Matrix<T> b)
+        private Vector<double>[][] GetTransposedVectors()
         {
-            Contract.Requires(a.Width == b.Height && a.Height == b.Width);
+            Contract.Requires(Height % vsize == 0);
 
-            var result = new Matrix<T>(b.Width, a.Height);
-
-            var tempb = b.Transpose();
-
-            var bcolVectors = new Vector<T>[tempb.Height];
-            for (int row = 0; row < result.Width; row++)
+            var result = new Vector<double>[Width][];
+            for (int row = 0; row < Width; row++)
             {
-                bcolVectors[row] = new Vector<T>(tempb.m[row]);
-            }
+                var vectorrow = new Vector<double>[Height / vsize];
+                result[row] = vectorrow;
 
-            for (int row = 0; row < result.Height; row++)
-            {
-                var arow = new Vector<T>(a.m[row]);
-                var resultrow = result.m[row];
-                for (int col = 0; col < result.Width; col++)
+                for (int col = 0; col < Height; col += vsize)
                 {
-                    var bcol = bcolVectors[col];
-                    resultrow[col] = Vector.Dot(arow,bcol);
+                    var vectordata = new double[vsize];
+                    for (int j = 0; j < vsize; j++) vectordata[j] = m[col + j][row];
+                    vectorrow[col/vsize] = new Vector<double>(vectordata);
                 }
             }
 
             return result;
         }
 
-        public static Matrix<T> ParallelMultiply(Matrix<T> a, Matrix<T> b)
+        public static Matrix Multiply(Matrix a, Matrix b)
         {
             Contract.Requires(a.Width == b.Height && a.Height == b.Width);
+            Contract.Requires(a.Width % vsize == 0);
 
-            var result = new Matrix<T>(b.Width, a.Height);
+            var result = new Matrix(b.Width, a.Height);
 
-            var tempb = b.Transpose();
+            var bcolVectors = b.GetTransposedVectors();
 
-            var bcolVectors = new Vector<T>[tempb.Height];
-            for(int row=0;row<result.Width;row++)
+            var arowVectors = new Vector<double>[result.Width / vsize];
+
+            for (int row = 0; row < result.Height; row++)
             {
-                bcolVectors[row] = new Vector<T>(tempb.m[row]);
-            }
-
-            Parallel.For(0, result.Height, (row) =>
-            {
-                var arow = new Vector<T>(a.m[row]);
-                //Console.WriteLine(row);
+                var arow = a.m[row];
                 var resultrow = result.m[row];
+
+                for (int col = 0; col < result.Width; col += vsize) arowVectors[col/vsize] = new Vector<double>(arow, col);
+
                 for (int col = 0; col < result.Width; col++)
                 {
                     var bcol = bcolVectors[col];
-                    resultrow[col] = Vector.Dot(arow, bcol);
+                    double sum = 0;
+                    for (int j = 0; j < result.Width / vsize; j++)
+                        sum += Vector.Dot(arowVectors[j], bcol[j]);
+                    resultrow[col] = sum;
+                }
+            }
+
+            return result;
+        }
+
+        public static Matrix ParallelMultiply(Matrix a, Matrix b)
+        {
+            Contract.Requires(a.Width == b.Height && a.Height == b.Width);
+            Contract.Requires(a.Width % vsize == 0);
+
+            var result = new Matrix(b.Width, a.Height);
+
+            var bcolVectors = b.GetTransposedVectors();
+
+            Parallel.For(0, result.Height, (row) =>
+            {
+                var arow = a.m[row];
+                var resultrow = result.m[row];
+
+                var arowVectors = new Vector<double>[result.Width / vsize];
+                for (int col = 0; col < result.Width; col += vsize) arowVectors[col/vsize] = new Vector<double>(arow, col);
+
+                for (int col = 0; col < result.Width; col++)
+                {
+                    var bcol = bcolVectors[col];
+                    double sum = 0;
+                    for (int j = 0; j < result.Width / vsize; j++)
+                        sum += Vector.Dot(arowVectors[j], bcol[j]);
+                    resultrow[col] = sum;
                 }
             });
 
             return result;
         }
 
-        public void SetAt(int row, int col, T value)
+        public void SetAt(int row, int col, double value)
         {
             m[row][col] = value;
         }
 
-        public T GetAt(int row, int col)
+        public double GetAt(int row, int col)
         {
             return m[row][col];
         }
@@ -113,19 +139,7 @@ namespace MatrixMultiply
 
     class Program
     {
-        static void AssignRandom(Matrix<float> matrix)
-        {
-            Random rnd = new Random();
-            for (int row = 0; row < matrix.Height; row++)
-            {
-                for (int col = 0; col < matrix.Width; col++)
-                {
-                    matrix.SetAt(row, col, (float)rnd.NextDouble());
-                }
-            }
-        }
-
-        static void AssignRandom(Matrix<double> matrix)
+        static void AssignRandom(Matrix matrix)
         {
             Random rnd = new Random();
             for (int row = 0; row < matrix.Height; row++)
@@ -136,77 +150,37 @@ namespace MatrixMultiply
                 }
             }
         }
-
-        static Matrix<float> TestFloat()
+        
+        static Matrix TestDouble()
         {
-            Matrix<float> a = new Matrix<float>(4096, 4096);
-            Matrix<float> b = new Matrix<float>(4096, 4096);
+            var a = new Matrix(4096, 4096);
+            var b = new Matrix(4096, 4096);
 
             AssignRandom(a);
             AssignRandom(b);
 
-            return Matrix<float>.Multiply(a, b);
+            return Matrix.Multiply(a, b);
         }
 
-        static Matrix<float> ParallelTestFloat()
+        static Matrix ParallelTestDouble()
         {
-            var a = new Matrix<float>(4096, 4096);
-            var b = new Matrix<float>(4096, 4096);
+            var a = new Matrix(4096, 4096);
+            var b = new Matrix(4096, 4096);
 
             AssignRandom(a);
             AssignRandom(b);
 
-            return Matrix<float>.ParallelMultiply(a, b);
-        }
-
-        static Matrix<double> TestDouble()
-        {
-            var a = new Matrix<double>(4096, 4096);
-            var b = new Matrix<double>(4096, 4096);
-
-            AssignRandom(a);
-            AssignRandom(b);
-
-            return Matrix<double>.Multiply(a, b);
-        }
-
-        static Matrix<double> ParallelTestDouble()
-        {
-            var a = new Matrix<double>(4096, 4096);
-            var b = new Matrix<double>(4096, 4096);
-
-            AssignRandom(a);
-            AssignRandom(b);
-
-            return Matrix<double>.ParallelMultiply(a, b);
+            return Matrix.ParallelMultiply(a, b);
         }
 
         static void Main(string[] args)
         {
             Console.WriteLine(Vector.IsHardwareAccelerated);
-            Console.WriteLine("Starting Single thread multiply float");
+            Console.WriteLine("Starting Single thread multiply double");
 
             Stopwatch watch = Stopwatch.StartNew();
 
-            var result1=TestFloat();
-
-            Console.WriteLine("Single thread multiply float elapsed seconds: " + watch.Elapsed.TotalSeconds);
-
-            Console.WriteLine("Starting Parallel multiply float");
-
-            watch = Stopwatch.StartNew();
-
-            var result2 = ParallelTestFloat();
-
-            Console.WriteLine("Parallel multiply float elapsed seconds: " + watch.Elapsed.TotalSeconds);
-
-            /////////////
-
-            Console.WriteLine("Starting Single thread multiply double");
-
-            watch = Stopwatch.StartNew();
-
-            var result3 = TestDouble();
+            var result1 = TestDouble();
 
             Console.WriteLine("Single thread multiply double elapsed seconds: " + watch.Elapsed.TotalSeconds);
 
@@ -214,7 +188,7 @@ namespace MatrixMultiply
 
             watch = Stopwatch.StartNew();
 
-            var result4 = ParallelTestDouble();
+            var result2 = ParallelTestDouble();
 
             Console.WriteLine("Parallel multiply double elapsed seconds: " + watch.Elapsed.TotalSeconds);
 
@@ -222,24 +196,9 @@ namespace MatrixMultiply
 
             Console.WriteLine(Sum(result1));
             Console.WriteLine(Sum(result2));
-            Console.WriteLine(Sum(result3));
-            Console.WriteLine(Sum(result4));
         }
 
-        private static float Sum(Matrix<float> matrix)
-        {
-            float sum = 0;
-            for (int row = 0; row < matrix.Height; row++)
-            {
-                for (int col = 0; col < matrix.Width; col++)
-                {
-                    sum += matrix.GetAt(row, col);
-                }
-            }
-
-            return sum;
-        }
-        private static double Sum(Matrix<double> matrix)
+        private static double Sum(Matrix matrix)
         {
             double sum = 0;
             for (int row = 0; row < matrix.Height; row++)
