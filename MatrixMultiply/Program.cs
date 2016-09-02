@@ -150,6 +150,7 @@ namespace MatrixMultiply
 
         static void Main(string[] args)
         {
+            Console.WriteLine(Vector.IsHardwareAccelerated);
             Console.WriteLine("Starting Single thread multiply");
 
             Stopwatch watch = Stopwatch.StartNew();
