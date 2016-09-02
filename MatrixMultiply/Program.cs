@@ -137,7 +137,7 @@ namespace MatrixMultiply
             }
         }
 
-        static void TestFloat()
+        static Matrix<float> TestFloat()
         {
             Matrix<float> a = new Matrix<float>(4096, 4096);
             Matrix<float> b = new Matrix<float>(4096, 4096);
@@ -145,10 +145,10 @@ namespace MatrixMultiply
             AssignRandom(a);
             AssignRandom(b);
 
-            Matrix<float> result = Matrix<float>.Multiply(a, b);
+            return Matrix<float>.Multiply(a, b);
         }
 
-        static void ParallelTestFloat()
+        static Matrix<float> ParallelTestFloat()
         {
             var a = new Matrix<float>(4096, 4096);
             var b = new Matrix<float>(4096, 4096);
@@ -156,10 +156,10 @@ namespace MatrixMultiply
             AssignRandom(a);
             AssignRandom(b);
 
-            Matrix<float> result = Matrix<float>.ParallelMultiply(a, b);
+            return Matrix<float>.ParallelMultiply(a, b);
         }
 
-        static void TestDouble()
+        static Matrix<double> TestDouble()
         {
             var a = new Matrix<double>(4096, 4096);
             var b = new Matrix<double>(4096, 4096);
@@ -167,10 +167,10 @@ namespace MatrixMultiply
             AssignRandom(a);
             AssignRandom(b);
 
-            var result = Matrix<double>.Multiply(a, b);
+            return Matrix<double>.Multiply(a, b);
         }
 
-        static void ParallelTestDouble()
+        static Matrix<double> ParallelTestDouble()
         {
             var a = new Matrix<double>(4096, 4096);
             var b = new Matrix<double>(4096, 4096);
@@ -178,7 +178,7 @@ namespace MatrixMultiply
             AssignRandom(a);
             AssignRandom(b);
 
-            var result = Matrix<double>.ParallelMultiply(a, b);
+            return Matrix<double>.ParallelMultiply(a, b);
         }
 
         static void Main(string[] args)
@@ -188,7 +188,7 @@ namespace MatrixMultiply
 
             Stopwatch watch = Stopwatch.StartNew();
 
-            TestFloat();
+            var result1=TestFloat();
 
             Console.WriteLine("Single thread multiply float elapsed seconds: " + watch.Elapsed.TotalSeconds);
 
@@ -196,7 +196,7 @@ namespace MatrixMultiply
 
             watch = Stopwatch.StartNew();
 
-            ParallelTestFloat();
+            var result2 = ParallelTestFloat();
 
             Console.WriteLine("Parallel multiply float elapsed seconds: " + watch.Elapsed.TotalSeconds);
 
@@ -206,7 +206,7 @@ namespace MatrixMultiply
 
             watch = Stopwatch.StartNew();
 
-            TestDouble();
+            var result3 = TestDouble();
 
             Console.WriteLine("Single thread multiply double elapsed seconds: " + watch.Elapsed.TotalSeconds);
 
@@ -214,10 +214,43 @@ namespace MatrixMultiply
 
             watch = Stopwatch.StartNew();
 
-            ParallelTestDouble();
+            var result4 = ParallelTestDouble();
 
             Console.WriteLine("Parallel multiply double elapsed seconds: " + watch.Elapsed.TotalSeconds);
 
+            //To be sure results are not removed by optimization
+
+            Console.WriteLine(Sum(result1));
+            Console.WriteLine(Sum(result2));
+            Console.WriteLine(Sum(result3));
+            Console.WriteLine(Sum(result4));
+        }
+
+        private static float Sum(Matrix<float> matrix)
+        {
+            float sum = 0;
+            for (int row = 0; row < matrix.Height; row++)
+            {
+                for (int col = 0; col < matrix.Width; col++)
+                {
+                    sum += matrix.GetAt(row, col);
+                }
+            }
+
+            return sum;
+        }
+        private static double Sum(Matrix<double> matrix)
+        {
+            double sum = 0;
+            for (int row = 0; row < matrix.Height; row++)
+            {
+                for (int col = 0; col < matrix.Width; col++)
+                {
+                    sum += matrix.GetAt(row, col);
+                }
+            }
+
+            return sum;
         }
     }
 }
