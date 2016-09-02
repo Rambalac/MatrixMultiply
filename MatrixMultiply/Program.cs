@@ -51,7 +51,6 @@ namespace MatrixMultiply
 
             for (int row = 0; row < result.Height; row++)
             {
-                Console.WriteLine(row);
                 var resultrow = result.m[row];
                 for (int col = 0; col < result.Width; col++)
                 {
@@ -148,17 +147,21 @@ namespace MatrixMultiply
 
         static void Main(string[] args)
         {
+            Console.WriteLine("Starting Single thread multiply");
+
             Stopwatch watch = Stopwatch.StartNew();
 
             Test();
 
-            Console.WriteLine("Single threaded Test elapsed seconds: " + watch.Elapsed.TotalSeconds);
+            Console.WriteLine("Single thread multiply elapsed seconds: " + watch.Elapsed.TotalSeconds);
+
+            Console.WriteLine("Starting Parallel multiply");
 
             watch = Stopwatch.StartNew();
 
             ParallelTest();
 
-            Console.WriteLine("Parallel Test elapsed seconds: " + watch.Elapsed.TotalSeconds);
+            Console.WriteLine("Parallel multiple elapsed seconds: " + watch.Elapsed.TotalSeconds);
 
         }
     }
