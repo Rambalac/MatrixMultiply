@@ -161,7 +161,7 @@ namespace MatrixMultiply
 
             ParallelTest();
 
-            Console.WriteLine("Parallel multiple elapsed seconds: " + watch.Elapsed.TotalSeconds);
+            Console.WriteLine("Parallel multiply elapsed seconds: " + watch.Elapsed.TotalSeconds);
 
         }
     }
