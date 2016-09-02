@@ -5,6 +5,7 @@ using System.Diagnostics.Contracts;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Numerics;
 
 namespace MatrixMultiply
 {
@@ -49,19 +50,20 @@ namespace MatrixMultiply
 
             var tempb = b.Transpose();
 
+            var bcolVectors = new Vector<float>[tempb.Height];
+            for (int row = 0; row < result.Width; row++)
+            {
+                bcolVectors[row] = new Vector<float>(tempb.m[row]);
+            }
+
             for (int row = 0; row < result.Height; row++)
             {
+                var arow = new Vector<float>(a.m[row]);
                 var resultrow = result.m[row];
                 for (int col = 0; col < result.Width; col++)
                 {
-                    float sum = 0;
-                    var arow = a.m[row];
-                    var bcol = tempb.m[col];
-                    for (int j = 0; j < a.Width; j++)
-                    {
-                        sum += arow[j] * bcol[j];
-                    }
-                    resultrow[col] = sum;
+                    var bcol = bcolVectors[col];
+                    resultrow[col] = Vector.Dot(arow,bcol);
                 }
             }
 
@@ -76,20 +78,21 @@ namespace MatrixMultiply
 
             var tempb = b.Transpose();
 
+            var bcolVectors = new Vector<float>[tempb.Height];
+            for(int row=0;row<result.Width;row++)
+            {
+                bcolVectors[row] = new Vector<float>(tempb.m[row]);
+            }
+
             Parallel.For(0, result.Height, (row) =>
             {
+                var arow = new Vector<float>(a.m[row]);
                 //Console.WriteLine(row);
                 var resultrow = result.m[row];
                 for (int col = 0; col < result.Width; col++)
                 {
-                    float sum = 0;
-                    var arow = a.m[row];
-                    var bcol = tempb.m[col];
-                    for (int j = 0; j < a.Width; j++)
-                    {
-                        sum += arow[j] * bcol[j];
-                    }
-                    resultrow[col] = sum;
+                    var bcol = bcolVectors[col];
+                    resultrow[col] = Vector.Dot(arow, bcol);
                 }
             });
 
